@@ -1,0 +1,311 @@
+<!doctype html>
+<!-- Root : لفظ المعماري 2026-10-10 «عايز سيشن ابني اللعبه دي بس بمنهج و طريقه عاطف» و«on android and apple if possible to my kids» — والتصميم اعتمده بالأداة 2026-10-10 -->
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>مكعبات رص</title>
+<meta name="description" content="لعبة رص مكعبات هادية — من غير إعلانات ولا ضغط.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="مكعبات رص">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#f6efe4">
+<style>
+:root {
+  --bg: #f6efe4; --panel: #ebe0cf; --cell: #e0d3bf; --line: #d3c4ad; --ink: #3b3127; --soft: #7a6b5a;
+  --accent: #c8734a; --ghost: rgba(59,49,39,.18);
+  --c1: #e38b6d; --c2: #e9b949; --c3: #8cbf7a; --c4: #6fa9c9; --c5: #a98bd1; --c6: #d986a6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #23201c; --panel: #2e2a25; --cell: #393430; --line: #45403a; --ink: #f1e9dc; --soft: #b5a894;
+    --accent: #e0905f; --ghost: rgba(241,233,220,.22);
+    --c1: #d97a5c; --c2: #d9a93c; --c3: #7cae6a; --c4: #5f98b8; --c5: #987bc0; --c6: #c87596;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #23201c; --panel: #2e2a25; --cell: #393430; --line: #45403a; --ink: #f1e9dc; --soft: #b5a894;
+  --accent: #e0905f; --ghost: rgba(241,233,220,.22);
+  --c1: #d97a5c; --c2: #d9a93c; --c3: #7cae6a; --c4: #5f98b8; --c5: #987bc0; --c6: #c87596;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+  overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
+}
+header { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+h1 { font-size: 20px; margin: 0; }
+.scores { display: flex; gap: 16px; align-items: baseline; }
+.score { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.best { color: var(--soft); font-size: 14px; }
+.combo { height: 24px; margin: 4px 0; color: var(--accent); font-weight: 700; font-size: 18px; transition: opacity .2s; }
+#board {
+  direction: ltr; display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px;
+  width: min(480px, calc(100vw - 32px), calc(100vh - 330px)); min-width: 260px; aspect-ratio: 1;
+  background: var(--panel); padding: 6px; border-radius: 14px;
+}
+.cell { background: var(--cell); border-radius: 5px; }
+.cell.f1 { background: var(--c1); } .cell.f2 { background: var(--c2); } .cell.f3 { background: var(--c3); }
+.cell.f4 { background: var(--c4); } .cell.f5 { background: var(--c5); } .cell.f6 { background: var(--c6); }
+.cell.filled, .mini .b, #drag .b { box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
+.cell.ghost { background: var(--ghost); }
+.cell.clearing { animation: fade .22s ease-out forwards; }
+@keyframes fade { to { opacity: 0; transform: scale(.6); } }
+#tray { direction: ltr; width: min(480px, calc(100vw - 32px)); display: flex; justify-content: space-around; align-items: center; height: 120px; margin-top: 14px; }
+.slot { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; }
+.mini { display: grid; gap: 2px; cursor: grab; touch-action: none; }
+.mini.no-fit { opacity: .35; }
+.mini .b, #drag .b { border-radius: 4px; }
+.mini .e, #drag .e { visibility: hidden; }
+#drag { position: fixed; display: grid; gap: 3px; pointer-events: none; z-index: 10; opacity: .92; }
+.bar { width: 100%; max-width: 480px; display: flex; justify-content: space-between; margin-top: 10px; gap: 8px; }
+button {
+  font: inherit; font-size: 15px; color: var(--ink); background: var(--panel); border: 0;
+  padding: 10px 14px; border-radius: 10px; cursor: pointer; min-height: 44px;
+}
+button:disabled { opacity: .45; cursor: default; }
+button.main { background: var(--accent); color: #fff; font-weight: 700; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 20; }
+.overlay.show { display: flex; }
+.card { background: var(--bg); border-radius: 16px; padding: 22px; max-width: 380px; width: 100%; max-height: 85vh; overflow: auto; text-align: center; }
+.card h2 { margin: 0 0 10px; font-size: 22px; }
+.card p, .card li { line-height: 1.7; text-align: start; }
+.card .big { font-size: 40px; font-weight: 700; text-align: center; margin: 6px 0; }
+.card .row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+.card ul { padding-inline-start: 20px; margin: 8px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="scores"><span class="score" id="score">0</span><span class="best">أحسن رقم: <b id="best">0</b></span></div>
+  <h1>مكعبات رص</h1>
+</header>
+<div class="combo" id="combo"></div>
+<div id="board"></div>
+<div id="tray"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
+<div class="bar">
+  <button id="undo">تراجع (مرة)</button>
+  <button id="howBtn">إزاي بتشتغل</button>
+  <button id="newBtn">جولة جديدة</button>
+</div>
+
+<div class="overlay" id="overO"><div class="card">
+  <h2>خلصت الجولة</h2>
+  <div class="big" id="finalScore">0</div>
+  <p style="text-align:center" id="finalBest"></p>
+  <div class="row"><button class="main" id="againBtn">جولة جديدة</button><button id="overUndo">تراجع عن آخر حركة</button></div>
+</div></div>
+
+<div class="overlay" id="timeO"><div class="card">
+  <h2>لعبت ٢٠ دقيقة</h2>
+  <p style="text-align:center">تحب تكمّل؟</p>
+  <div class="row"><button class="main" id="contBtn">أكمّل</button><button id="enoughBtn">كفاية النهارده</button></div>
+</div></div>
+
+<div class="overlay" id="byeO"><div class="card">
+  <h2>نشوفك بعدين</h2>
+  <p style="text-align:center">رقمك النهارده: <b id="byeScore">0</b></p>
+  <p style="text-align:center">الجولة محفوظة هنا لحد ما ترجع.</p>
+  <div class="row"><button id="byeClose">تمام</button></div>
+</div></div>
+
+<div class="overlay" id="howO"><div class="card">
+  <h2>إزاي بتشتغل</h2>
+  <ul>
+    <li>اسحب أي قطعة من التلاتة وحطها على اللوح.</li>
+    <li>لما صف أو عمود يتملي كله، بيتمسح.</li>
+    <li>كل مربع تحطه بنقطة. خط واحد بـ١٠، خطين مع بعض بـ٤٠، تلاتة بـ٩٠.</li>
+    <li>لو مسحت حركة ورا حركة، النقط بتتضرب في الكومبو (×٢، ×٣…). لو عدّت ٣ قطع من غير مسح، الكومبو يرجع من الأول.</li>
+    <li>القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.</li>
+    <li>الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.</li>
+    <li>عندك تراجع واحد ببلاش في كل جولة.</li>
+    <li>مفيش إعلانات، ومفيش حاجة بتضيع لو غبت.</li>
+  </ul>
+  <div class="row"><button class="main" id="howClose">تمام</button></div>
+</div></div>
+
+<script src="logic.js"></script>
+<script>
+(function () {
+  'use strict';
+  var L = window.RassLogic, N = L.SIZE;
+  var $ = function (id) { return document.getElementById(id); };
+  var boardEl = $('board'), slots = document.querySelectorAll('.slot');
+  var cells = [];
+  for (var i = 0; i < N * N; i++) { var d = document.createElement('div'); d.className = 'cell'; boardEl.appendChild(d); cells.push(d); }
+
+  function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+  var best = parseInt(store('rass.best') || '0', 10) || 0;
+  var state;
+
+  function save() {
+    try { store('rass.game', JSON.stringify({ board: state.board, tray: state.tray, score: state.score, combo: state.combo, noClear: state.noClear, undoUsed: state.undoUsed })); } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(store('rass.game'));
+      if (!s || !s.board || s.board.length !== N * N) return null;
+      var g = L.newGame(Math.random);
+      g.board = s.board; g.tray = s.tray; g.score = s.score; g.combo = s.combo; g.noClear = s.noClear; g.undoUsed = !!s.undoUsed;
+      g.over = L.isOver(g);
+      return g.over ? null : g;
+    } catch (e) { return null; }
+  }
+  function newGame() { state = L.newGame(Math.random); save(); render(); }
+
+  function render(ghost) {
+    for (var i = 0; i < N * N; i++) {
+      var v = state.board[i];
+      cells[i].className = 'cell' + (v ? ' filled f' + v : '');
+    }
+    if (ghost) ghost.forEach(function (k) { cells[k].className = 'cell ghost'; });
+    $('score').textContent = state.score;
+    $('best').textContent = best;
+    $('combo').textContent = state.combo >= 2 ? 'كومبو ×' + state.combo : '';
+    $('undo').disabled = state.undoUsed || !state.snapshot;
+    $('undo').textContent = state.undoUsed ? 'التراجع: استُخدم' : 'تراجع (مرة)';
+    renderTray();
+  }
+
+  function cellSize() { return (boardEl.clientWidth - 12 - 7 * 3) / 8; }
+
+  function buildPiece(el, piece, size, gap) {
+    var h = 0, w = 0;
+    piece.cells.forEach(function (c) { h = Math.max(h, c[0] + 1); w = Math.max(w, c[1] + 1); });
+    el.innerHTML = '';
+    el.style.gridTemplateColumns = 'repeat(' + w + ',' + size + 'px)';
+    el.style.gridAutoRows = size + 'px';
+    el.style.gap = gap + 'px';
+    var map = {};
+    piece.cells.forEach(function (c) { map[c[0] * 10 + c[1]] = true; });
+    for (var r = 0; r < h; r++) for (var c = 0; c < w; c++) {
+      var b = document.createElement('div');
+      b.className = map[r * 10 + c] ? 'b' : 'e';
+      if (map[r * 10 + c]) b.style.background = 'var(--c' + piece.color + ')';
+      el.appendChild(b);
+    }
+    return { w: w, h: h };
+  }
+
+  function renderTray() {
+    var mini = Math.max(14, Math.min(22, cellSize() * 0.5));
+    for (var t = 0; t < 3; t++) {
+      slots[t].innerHTML = '';
+      var p = state.tray[t];
+      if (!p) continue;
+      var el = document.createElement('div');
+      el.className = 'mini' + (L.fitsAnywhere(state.board, p.cells) ? '' : ' no-fit');
+      buildPiece(el, p, mini, 2);
+      el.dataset.idx = t;
+      el.addEventListener('pointerdown', startDrag);
+      slots[t].appendChild(el);
+    }
+  }
+
+  // السحب
+  var drag = null;
+  function startDrag(e) {
+    if (state.over) return;
+    e.preventDefault();
+    var idx = +e.currentTarget.dataset.idx, piece = state.tray[idx];
+    var size = cellSize();
+    var el = document.createElement('div');
+    el.id = 'drag';
+    var dims = buildPiece(el, piece, size, 3);
+    document.body.appendChild(el);
+    e.currentTarget.style.visibility = 'hidden';
+    drag = { idx: idx, piece: piece, el: el, src: e.currentTarget, size: size, dims: dims,
+             lift: e.pointerType === 'mouse' ? 0 : size * 1.6, target: null };
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (x) {}
+    moveDrag(e);
+  }
+  function moveDrag(e) {
+    if (!drag) return;
+    var pw = drag.dims.w * drag.size + (drag.dims.w - 1) * 3, ph = drag.dims.h * drag.size + (drag.dims.h - 1) * 3;
+    var left = e.clientX - pw / 2, top = e.clientY - ph / 2 - drag.lift;
+    drag.el.style.left = left + 'px'; drag.el.style.top = top + 'px';
+    var rect = boardEl.getBoundingClientRect(), step = drag.size + 3;
+    var c = Math.round((left - rect.left - 6) / step), r = Math.round((top - rect.top - 6) / step);
+    if (L.canPlace(state.board, drag.piece.cells, r, c)) {
+      drag.target = [r, c];
+      render(drag.piece.cells.map(function (k) { return (r + k[0]) * N + c + k[1]; }));
+      hideSrc();
+    } else if (drag.target) { drag.target = null; render(); hideSrc(); }
+  }
+  function hideSrc() { var m = slots[drag.idx].firstChild; if (m) m.style.visibility = 'hidden'; }
+  function endDrag() {
+    if (!drag) return;
+    var d = drag; drag = null;
+    d.el.remove();
+    if (d.target) commit(d.idx, d.target[0], d.target[1], d.piece); else render();
+  }
+  window.addEventListener('pointermove', moveDrag, { passive: true });
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+
+  function commit(idx, r, c, piece) {
+    var pre = state.board.slice();
+    piece.cells.forEach(function (k) { pre[(r + k[0]) * N + c + k[1]] = piece.color; });
+    var res = L.place(state, idx, r, c);
+    if (!res) { render(); return; }
+    activity();
+    if (state.score > best) { best = state.score; store('rass.best', String(best)); }
+    save();
+    if (res.lines) {
+      render();
+      res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; });
+      setTimeout(function () { render(); afterMove(); }, 230);
+    } else { render(); afterMove(); }
+  }
+  function afterMove() {
+    if (state.over) {
+      $('finalScore').textContent = state.score;
+      $('overUndo').style.display = state.undoUsed ? 'none' : '';
+      $('finalBest').textContent = state.score >= best && state.score > 0 ? 'ده أحسن رقم ليك لحد دلوقتي' : 'أحسن رقم ليك: ' + best;
+      try { localStorage.removeItem('rass.game'); } catch (e) {}
+      setTimeout(function () { show('overO'); }, 350);
+    }
+  }
+
+  function show(id) { $(id).classList.add('show'); }
+  function hide(id) { $(id).classList.remove('show'); }
+
+  $('undo').onclick = function () { if (L.undo(state)) { hide('overO'); save(); render(); } };
+  $('overUndo').onclick = function () { $('undo').onclick(); };
+  $('newBtn').onclick = function () { hide('overO'); newGame(); };
+  $('againBtn').onclick = function () { hide('overO'); newGame(); };
+  $('howBtn').onclick = function () { show('howO'); };
+  $('howClose').onclick = function () { hide('howO'); };
+
+  // كلمة الوقت: بعد ٢٠ دقيقة لعب فعلي (الصفحة ظاهرة وفي لمس خلال آخر دقيقتين) — مرة واحدة، من غير قفل
+  var played = 0, lastTouch = 0, told = false;
+  function activity() { lastTouch = Date.now(); }
+  setInterval(function () {
+    if (told || document.hidden || Date.now() - lastTouch > 120000) return;
+    played += 1;
+    if (played >= 20 * 60) { told = true; show('timeO'); }
+  }, 1000);
+  $('contBtn').onclick = function () { hide('timeO'); };
+  $('enoughBtn').onclick = function () { hide('timeO'); $('byeScore').textContent = state.score; show('byeO'); };
+  $('byeClose').onclick = function () { hide('byeO'); };
+
+  window.addEventListener('resize', function () { render(); });
+  state = load() || L.newGame(Math.random);
+  render();
+
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    navigator.serviceWorker.register('sw.js').catch(function () {});
+  }
+  window.__rass = { get state() { return state; }, commit: commit, L: L };
+})();
+</script>
+</body>
+</html>
