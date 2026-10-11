@@ -35,6 +35,7 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { margin: 0; height: 100%; }
 body {
+  transition: background-color .6s ease, color .6s ease;
   background: var(--bg); color: var(--ink);
   font-family: system-ui, -apple-system, "Segoe UI", Tahoma, sans-serif;
   display: flex; flex-direction: column; align-items: center;
@@ -148,6 +149,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     <li>القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.</li>
     <li>الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.</li>
     <li>لما تمسح خطوط، الكمبيوتر بيشجّعك: Nice (خط) · Good (خطين، +٢٠) · Very good (٣، +٥٠) · Excellent (٤ أو أكتر، +١٠٠) · Amazing لو اللوح فضي خالص (+٣٠٠).</li>
+    <li>كل ليفل ليه عالم وألوان: الحديقة، البحر، الصحرا، الفضا، الحلويات، الغابة.</li>
     <li>الليفلات: أول ليفل قطعه صغيرة وسهلة. كل ما تمسح خطوط بتطلع ليفل، والأشكال الأكبر بتدخل. كل جولة جديدة بتبدأ من ليفل ١.</li>
     <li>عندك تراجع واحد ببلاش في كل جولة.</li>
     <li>مفيش إعلانات، ومفيش حاجة بتضيع لو غبت.</li>
@@ -192,7 +194,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     if (ghost) ghost.forEach(function (k) { cells[k].className = 'cell ghost'; });
     $('score').textContent = state.score;
     $('best').textContent = best;
-    $('lvl').textContent = 'ليفل ' + state.level;
+    applyTheme(state.level);
+    $('lvl').textContent = 'ليفل ' + state.level + ' · ' + themeName(state.level);
     var at = [0, 3, 8, 15], lv = state.level, lo = lv <= 3 ? at[lv - 1] : 15 + (lv - 4) * 10, hi = lv <= 3 ? at[lv] : lo + 10;
     $('prog').style.width = Math.min(100, (state.lines - lo) / (hi - lo) * 100) + '%';
     $('combo').textContent = state.combo >= 2 ? 'كومبو ×' + state.combo : '';
@@ -303,7 +306,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; sparkle(cells[k]); });
       plus('+' + res.gained);
       if (res.praise) cheer(res.praise.word, res.praise.bonus ? ' +' + res.praise.bonus : '');
-      if (res.leveledUp) setTimeout(function () { cheer('Level ' + res.level + '!', ''); sfx.levelUp(); }, 1250);
+      if (res.leveledUp) setTimeout(function () { cheer('Level ' + res.level + '!', ''); plus(themeName(res.level)); sfx.levelUp(); }, 1250);
       if (state.combo >= 2) { var cb = $('combo'); cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump'); }
       setTimeout(function () { render(); afterMove(); }, 330);
     } else { sfx.place(); afterMove(); }
@@ -348,6 +351,35 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     document.body.appendChild(el);
     setTimeout(function () { el.remove(); }, 950);
   }
+
+  // لكل ليفل عالم بألوانه (بطلبه 2026-10-10 22:44 «Every level have a theme and colors differently»)
+  var THEMES = [
+    { name: 'الحديقة 🌷', bg: '#eef6e6', panel: '#d9ead0', cell: '#c9dfbd', ink: '#2f3b2a', soft: '#5f7457', accent: '#e0703f',
+      c: ['#ef8a7a', '#f2c14e', '#7cc36a', '#6fb1d8', '#b28ddb', '#f29bc0'] },
+    { name: 'البحر 🐠', bg: '#e3f1fb', panel: '#c6e1f3', cell: '#b0d3ec', ink: '#1d3448', soft: '#4e6d86', accent: '#ff8a3d',
+      c: ['#ff8a65', '#ffd54f', '#4dd0b1', '#3d8fd9', '#7e7ce0', '#f78fb3'] },
+    { name: 'الصحرا 🐪', bg: '#fbf0dc', panel: '#f1dcb6', cell: '#e8cd9d', ink: '#4a3420', soft: '#8a6a45', accent: '#c4552b',
+      c: ['#d9653b', '#e9a23b', '#9bb04a', '#4f9aa8', '#a3708f', '#e07a8f'] },
+    { name: 'الفضا 🚀', bg: '#151a33', panel: '#222a4d', cell: '#2c3560', ink: '#eef0ff', soft: '#a9b0d8', accent: '#ffcf4a',
+      c: ['#ff6b8b', '#ffcf4a', '#5ef0b0', '#5ab8ff', '#b78bff', '#ff9a4d'] },
+    { name: 'الحلويات 🍭', bg: '#fdeaf3', panel: '#f7d3e4', cell: '#f0c0d7', ink: '#4a2338', soft: '#8c5674', accent: '#e0457b',
+      c: ['#ff7aa8', '#ffc56b', '#8ee0a8', '#7fc4f2', '#c79bf2', '#ff9b7a'] },
+    { name: 'الغابة 🌳', bg: '#1f3326', panel: '#2b4533', cell: '#36533f', ink: '#eaf5e6', soft: '#a9c6a8', accent: '#f6b93b',
+      c: ['#f07b5a', '#f6c445', '#9ad66a', '#5fb7c9', '#c39be0', '#f094b4'] }
+  ];
+  var themeNow = 0;
+  function applyTheme(level) {
+    var i = (level - 1) % THEMES.length, t = THEMES[i];
+    if (i === themeNow && document.documentElement.style.getPropertyValue('--bg')) return;
+    themeNow = i;
+    var st = document.documentElement.style;
+    st.setProperty('--bg', t.bg); st.setProperty('--panel', t.panel); st.setProperty('--cell', t.cell);
+    st.setProperty('--ink', t.ink); st.setProperty('--soft', t.soft); st.setProperty('--accent', t.accent);
+    st.setProperty('--ghost', t.bg < '#8' ? 'rgba(255,255,255,.25)' : 'rgba(0,0,0,.16)');
+    t.c.forEach(function (col, k) { st.setProperty('--c' + (k + 1), col); });
+    var meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.setAttribute('content', t.bg);
+  }
+  function themeName(level) { return THEMES[(level - 1) % THEMES.length].name; }
 
   // الصوت: نغمات بتتعمل بالكود (من غير ملفات)، وله زرار يقفله ويفتحه
   var sfx = (function () {
