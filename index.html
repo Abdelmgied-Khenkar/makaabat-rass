@@ -85,6 +85,7 @@ h1 { font-size: 20px; margin: 0; white-space: nowrap; }
   -webkit-text-stroke: 2px rgba(0,0,0,.15); text-shadow: 0 4px 0 rgba(0,0,0,.15), 0 0 18px rgba(255,255,255,.6);
   animation: praise 1.2s cubic-bezier(.2,1.4,.4,1) forwards; transform: translate(-50%, -50%); white-space: nowrap; }
 @keyframes praise { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 18% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 30% { transform: translate(-50%,-50%) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%,-90%) scale(1); opacity: 0; } }
+.ic { flex: 1; font-size: 22px; font-weight: 700; }
 .lang { font-size: 14px; font-weight: 700; }
 .sound { min-width: 44px; font-size: 18px; padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .spark, .plus { display: none; } .praise { animation-duration: .01s; animation-delay: 1s; } .cell.pop, .combo.bump { animation: none; } }
@@ -115,9 +116,10 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 <div id="board"></div>
 <div id="tray"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
 <div class="bar">
-  <button id="undo">تراجع (مرة)</button>
-  <button id="howBtn" data-i="how">إزاي بتشتغل</button>
-  <button id="newBtn" data-i="newGame">جولة جديدة</button>
+  <button class="ic" id="undo">↶</button>
+  <button class="ic" id="pauseBtn">⏸</button>
+  <button class="ic" id="resetBtn">↻</button>
+  <button class="ic" id="howBtn">?</button>
 </div>
 
 <div class="overlay" id="overO"><div class="card">
@@ -140,6 +142,17 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
   <div class="row"><button id="byeClose" data-i="ok">تمام</button></div>
 </div></div>
 
+<div class="overlay" id="pauseO"><div class="card">
+  <h2 data-i="paused">استراحة ⏸</h2>
+  <div class="row"><button class="main" id="resumeBtn" data-i="resume">كمّل ▶</button></div>
+</div></div>
+
+<div class="overlay" id="resetO"><div class="card">
+  <h2 data-i="resetQ">تبدأ من الأول؟</h2>
+  <p style="text-align:center" data-i="resetNote">الجولة دي هتتمسح، وأحسن رقم ليك هيفضل.</p>
+  <div class="row"><button class="main" id="resetYes" data-i="resetYes">أيوه، من الأول</button><button id="resetNo" data-i="resetNo">لأ، أكمّل</button></div>
+</div></div>
+
 <div class="overlay" id="howO"><div class="card">
   <h2 data-i="how">إزاي بتشتغل</h2>
   <ul id="howList"></ul>
@@ -159,7 +172,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       undo: 'تراجع (مرة)', undoUsed: 'التراجع: استُخدم', level: 'ليفل', combo: 'كومبو ×', bestYet: 'ده أحسن رقم ليك لحد دلوقتي', yourBest: 'أحسن رقم ليك: ',
       t20: 'لعبت ٢٠ دقيقة', keepQ: 'تحب تكمّل؟', keep: 'أكمّل', enough: 'كفاية النهارده', bye: 'نشوفك بعدين', today: 'رقمك النهارده',
       saved: 'الجولة محفوظة هنا لحد ما ترجع.', ok: 'تمام', other: 'EN',
-      themes: ['الحديقة 🌷', 'البحر 🐠', 'الصحرا 🐪', 'الفضا 🚀', 'الحلويات 🍭', 'الغابة 🌳'],
+      paused: 'استراحة ⏸', resume: 'كمّل ▶', resetQ: 'تبدأ من الأول؟', resetNote: 'الجولة دي هتتمسح، وأحسن رقم ليك هيفضل.', resetYes: 'أيوه، من الأول', resetNo: 'لأ، أكمّل', pauseT: 'استراحة', resetT: 'من الأول',
+      themes: ['الحديقة 🌷', 'البحر 🐠', 'الصحرا 🐪', 'الفضا 🚀', 'الحلويات 🍭', 'الغابة 🌳', 'التلج ❄️', 'قوس قزح 🌈', 'المزرعة 🐄', 'القمر 🌙', 'الفواكه 🍉', 'الديناصورات 🦖'],
       praise: { 'Nice!': 'حلو!', 'Good!': 'شاطر!', 'Very good!': 'برافو!', 'Excellent!': 'ممتاز!', 'Amazing!': 'رهيب!' },
       levelUp: 'ليفل ',
       rules: [
@@ -169,7 +183,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
         'لو مسحت حركة ورا حركة، النقط بتتضرب في الكومبو (×٢، ×٣…). لو عدّت ٣ قطع من غير مسح، الكومبو يرجع من الأول.',
         'لما تمسح خطوط، الكمبيوتر بيشجّعك: حلو (خط) · شاطر (خطين، +٢٠) · برافو (٣، +٥٠) · ممتاز (٤ أو أكتر، +١٠٠) · رهيب لو اللوح فضي خالص (+٣٠٠).',
         'الليفلات: أول ليفل قطعه صغيرة وسهلة. كل ما تمسح خطوط بتطلع ليفل، والأشكال الأكبر بتدخل. كل جولة جديدة بتبدأ من ليفل ١.',
-        'كل ليفل ليه عالم وألوان: الحديقة، البحر، الصحرا، الفضا، الحلويات، الغابة.',
+        'كل ليفل ليه عالم وألوان: الحديقة، البحر، الصحرا، الفضا، الحلويات، الغابة، التلج، قوس قزح، المزرعة، القمر، الفواكه، الديناصورات.',
+        'من ليفل ٥ بتدخل أشكال جديدة: مستطيلات، وأشكال S وZ، وزاوية كبيرة، وعلامة +.',
         'القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.',
         'الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.',
         'عندك تراجع واحد ببلاش في كل جولة.',
@@ -181,7 +196,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       undo: 'Undo (once)', undoUsed: 'Undo: used', level: 'Level', combo: 'Combo ×', bestYet: 'Your best score yet!', yourBest: 'Your best: ',
       t20: 'You played 20 minutes', keepQ: 'Want to keep going?', keep: 'Keep going', enough: "That's enough today", bye: 'See you later', today: "Today's score",
       saved: 'Your game is saved here until you come back.', ok: 'OK', other: 'ع',
-      themes: ['Garden 🌷', 'Sea 🐠', 'Desert 🐪', 'Space 🚀', 'Sweets 🍭', 'Forest 🌳'],
+      paused: 'Paused ⏸', resume: 'Resume ▶', resetQ: 'Start over?', resetNote: 'This round will be cleared. Your best score stays.', resetYes: 'Yes, start over', resetNo: 'No, keep playing', pauseT: 'Pause', resetT: 'Start over',
+      themes: ['Garden 🌷', 'Sea 🐠', 'Desert 🐪', 'Space 🚀', 'Sweets 🍭', 'Forest 🌳', 'Snow ❄️', 'Rainbow 🌈', 'Farm 🐄', 'Moon 🌙', 'Fruits 🍉', 'Dinosaurs 🦖'],
       praise: {},
       levelUp: 'Level ',
       rules: [
@@ -191,7 +207,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
         'Clear move after move and your points multiply by the combo (×2, ×3…). Three pieces in a row without a clear resets the combo.',
         'When you clear lines the computer cheers: Nice (1 line) · Good (2, +20) · Very good (3, +50) · Excellent (4 or more, +100) · Amazing when the board is completely empty (+300).',
         'Levels: the first level has small, easy pieces. Clearing lines moves you up a level and bigger shapes join in. Every new game starts at level 1.',
-        'Every level has its own world and colors: Garden, Sea, Desert, Space, Sweets, Forest.',
+        'Every level has its own world and colors: Garden, Sea, Desert, Space, Sweets, Forest, Snow, Rainbow, Farm, Moon, Fruits, Dinosaurs.',
+        'From level 5, new shapes join: rectangles, S and Z shapes, a big corner and a plus sign.',
         'Pieces are random. The only rule: at least one of them always fits when they appear. No hidden tricks.',
         'The round ends when none of the remaining pieces fits.',
         'You get one free undo every round.',
@@ -209,6 +226,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     document.getElementById('howList').innerHTML = '';
     tr('rules').forEach(function (r) { var li = document.createElement('li'); li.textContent = r; document.getElementById('howList').appendChild(li); });
     document.getElementById('langBtn').textContent = tr('other');
+    document.getElementById('pauseBtn').title = tr('pauseT'); document.getElementById('resetBtn').title = tr('resetT'); document.getElementById('howBtn').title = tr('how');
   }
   var $ = function (id) { return document.getElementById(id); };
   var boardEl = $('board'), slots = document.querySelectorAll('.slot');
@@ -248,7 +266,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     $('prog').style.width = Math.min(100, (state.lines - lo) / (hi - lo) * 100) + '%';
     $('combo').textContent = state.combo >= 2 ? tr('combo') + state.combo : '';
     $('undo').disabled = state.undoUsed || !state.snapshot;
-    $('undo').textContent = state.undoUsed ? tr('undoUsed') : tr('undo');
+    $('undo').title = state.undoUsed ? tr('undoUsed') : tr('undo');
     renderTray();
   }
 
@@ -403,18 +421,30 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 
   // لكل ليفل عالم بألوانه (بطلبه 2026-10-10 22:44 «Every level have a theme and colors differently»)
   var THEMES = [
-    { name: 'الحديقة 🌷', bg: '#eef6e6', panel: '#d9ead0', cell: '#c9dfbd', ink: '#2f3b2a', soft: '#5f7457', accent: '#e0703f',
+    { bg: '#eef6e6', panel: '#d9ead0', cell: '#c9dfbd', ink: '#2f3b2a', soft: '#5f7457', accent: '#e0703f',
       c: ['#ef8a7a', '#f2c14e', '#7cc36a', '#6fb1d8', '#b28ddb', '#f29bc0'] },
-    { name: 'البحر 🐠', bg: '#e3f1fb', panel: '#c6e1f3', cell: '#b0d3ec', ink: '#1d3448', soft: '#4e6d86', accent: '#ff8a3d',
+    { bg: '#e3f1fb', panel: '#c6e1f3', cell: '#b0d3ec', ink: '#1d3448', soft: '#4e6d86', accent: '#ff8a3d',
       c: ['#ff8a65', '#ffd54f', '#4dd0b1', '#3d8fd9', '#7e7ce0', '#f78fb3'] },
-    { name: 'الصحرا 🐪', bg: '#fbf0dc', panel: '#f1dcb6', cell: '#e8cd9d', ink: '#4a3420', soft: '#8a6a45', accent: '#c4552b',
+    { bg: '#fbf0dc', panel: '#f1dcb6', cell: '#e8cd9d', ink: '#4a3420', soft: '#8a6a45', accent: '#c4552b',
       c: ['#d9653b', '#e9a23b', '#9bb04a', '#4f9aa8', '#a3708f', '#e07a8f'] },
-    { name: 'الفضا 🚀', bg: '#151a33', panel: '#222a4d', cell: '#2c3560', ink: '#eef0ff', soft: '#a9b0d8', accent: '#ffcf4a',
+    { bg: '#151a33', panel: '#222a4d', cell: '#2c3560', ink: '#eef0ff', soft: '#a9b0d8', accent: '#ffcf4a',
       c: ['#ff6b8b', '#ffcf4a', '#5ef0b0', '#5ab8ff', '#b78bff', '#ff9a4d'] },
-    { name: 'الحلويات 🍭', bg: '#fdeaf3', panel: '#f7d3e4', cell: '#f0c0d7', ink: '#4a2338', soft: '#8c5674', accent: '#e0457b',
+    { bg: '#fdeaf3', panel: '#f7d3e4', cell: '#f0c0d7', ink: '#4a2338', soft: '#8c5674', accent: '#e0457b',
       c: ['#ff7aa8', '#ffc56b', '#8ee0a8', '#7fc4f2', '#c79bf2', '#ff9b7a'] },
-    { name: 'الغابة 🌳', bg: '#1f3326', panel: '#2b4533', cell: '#36533f', ink: '#eaf5e6', soft: '#a9c6a8', accent: '#f6b93b',
-      c: ['#f07b5a', '#f6c445', '#9ad66a', '#5fb7c9', '#c39be0', '#f094b4'] }
+    { bg: '#1f3326', panel: '#2b4533', cell: '#36533f', ink: '#eaf5e6', soft: '#a9c6a8', accent: '#f6b93b',
+      c: ['#f07b5a', '#f6c445', '#9ad66a', '#5fb7c9', '#c39be0', '#f094b4'] },
+    { bg: '#eaf4fb', panel: '#d3e6f3', cell: '#c0dcee', ink: '#1f3346', soft: '#56708a', accent: '#3a86d4',
+      c: ['#f28fa0', '#ffd166', '#8fd3c1', '#6aa8e8', '#b9a7f0', '#ffffff'] },
+    { bg: '#fff7e8', panel: '#fde7c4', cell: '#f8d9a8', ink: '#3d2d1a', soft: '#86684a', accent: '#e8505b',
+      c: ['#e8505b', '#f9a03f', '#f6d743', '#4cb963', '#3a9ad9', '#8e6ccf'] },
+    { bg: '#f3efe0', panel: '#e3dcc0', cell: '#d6cca8', ink: '#3a3320', soft: '#7a7050', accent: '#c0702a',
+      c: ['#d9734e', '#e8b84a', '#8cb35a', '#6b9fbf', '#b58ab0', '#f2f2f2'] },
+    { bg: '#101830', panel: '#1b2546', cell: '#253159', ink: '#f2f0ff', soft: '#a7aed6', accent: '#ffe08a',
+      c: ['#ffe08a', '#ffb4a2', '#9ae6d0', '#8ec5ff', '#d3b6ff', '#fff6d6'] },
+    { bg: '#fdf3ec', panel: '#f8ddcc', cell: '#f2ccb5', ink: '#43261b', soft: '#8a5d4a', accent: '#e2433f',
+      c: ['#e2433f', '#ff9f43', '#ffd23f', '#6cc551', '#a259c4', '#ff7ab6'] },
+    { bg: '#2a2219', panel: '#3a2f22', cell: '#4a3c2b', ink: '#f6ecdc', soft: '#c9b597', accent: '#ff7a3d',
+      c: ['#ff7a3d', '#ffc94d', '#8fcf5a', '#59b3c4', '#c58be0', '#e8e0cf'] }
   ];
   var themeNow = 0;
   function applyTheme(level) {
@@ -443,8 +473,11 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     var scale = [523, 587, 659, 784, 880, 1047, 1175, 1319];
     return {
       unlock: function () {
+        try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} // آيفون: ما يتكتمش بزرار الصامت
         if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-        if (ctx && ctx.state === 'suspended') ctx.resume();
+        if (!ctx) return;
+        if (ctx.state !== 'running') { try { ctx.resume(); } catch (e) {} }
+        try { var b = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource(); src.buffer = b; src.connect(ctx.destination); src.start(0); } catch (e) {}
       },
       place: function () { tone(330, 0, 0.09, 0.18, 'triangle'); },
       clear: function (lines, combo) {
@@ -468,6 +501,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       get on() { return on; }
     };
   })();
+  // الموبايل ما بيسمحش بالصوت غير بعد ما الصباع يترفع — نفتحه هنا
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach(function (ev) { window.addEventListener(ev, function () { sfx.unlock(); }, { passive: true, capture: true }); });
   $('langBtn').onclick = function () { lang = lang === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('rass.lang', lang); } catch (e) {} applyLang(); render(); };
   applyLang();
   $('soundBtn').textContent = sfx.on ? '🔊' : '🔇';
@@ -478,7 +513,12 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 
   $('undo').onclick = function () { if (L.undo(state)) { hide('overO'); save(); render(); } };
   $('overUndo').onclick = function () { $('undo').onclick(); };
-  $('newBtn').onclick = function () { hide('overO'); newGame(); };
+  var paused = false;
+  $('pauseBtn').onclick = function () { paused = true; show('pauseO'); };
+  $('resumeBtn').onclick = function () { paused = false; hide('pauseO'); };
+  $('resetBtn').onclick = function () { show('resetO'); };
+  $('resetNo').onclick = function () { hide('resetO'); };
+  $('resetYes').onclick = function () { hide('resetO'); hide('overO'); newGame(); };
   $('againBtn').onclick = function () { hide('overO'); newGame(); };
   $('howBtn').onclick = function () { show('howO'); };
   $('howClose').onclick = function () { hide('howO'); };
@@ -487,7 +527,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
   var played = 0, lastTouch = 0, told = false;
   function activity() { lastTouch = Date.now(); }
   setInterval(function () {
-    if (told || document.hidden || Date.now() - lastTouch > 120000) return;
+    if (told || paused || document.hidden || Date.now() - lastTouch > 120000) return;
     played += 1;
     if (played >= 20 * 60) { told = true; show('timeO'); }
   }, 1000);

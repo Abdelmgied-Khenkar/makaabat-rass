@@ -171,5 +171,16 @@ test('التشجيع والبونس', function () {
   assert.strictEqual(res.gained, 1 + 40 + 20);
 });
 
+test('الأشكال الجديدة بتظهر من ليفل 5 بس', function () {
+  var b = L.emptyBoard(), seen4 = {}, seen5 = {};
+  for (var k = 0; k < 600; k++) {
+    L.dealTray(b, Math.random, 4).forEach(function (p) { seen4[p.shape] = 1; });
+    L.dealTray(b, Math.random, 5).forEach(function (p) { seen5[p.shape] = 1; });
+  }
+  assert.ok(Object.keys(seen4).every(function (i) { return +i <= 20; }), 'ليفل 4 ما فيهوش الجداد');
+  assert.ok(Object.keys(seen5).some(function (i) { return +i > 20; }), 'ليفل 5 فيه الجداد');
+  assert.strictEqual(L.SHAPES.length, 34);
+});
+
 console.log('\n' + passed + ' نجح · ' + failed + ' فشل');
 process.exit(failed ? 1 : 0);
