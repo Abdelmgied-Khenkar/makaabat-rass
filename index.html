@@ -57,7 +57,6 @@ h1 { font-size: 20px; margin: 0; }
 .cell.f4 { background: var(--c4); } .cell.f5 { background: var(--c5); } .cell.f6 { background: var(--c6); }
 .cell.filled, .mini .b, #drag .b { box-shadow: inset 0 -3px 0 rgba(0,0,0,.12); }
 .cell.ghost { background: var(--ghost); }
-.cell.clearing { animation: fade .22s ease-out forwards; }
 @keyframes fade { to { opacity: 0; transform: scale(.6); } }
 #tray { direction: ltr; width: min(480px, calc(100vw - 32px)); display: flex; justify-content: space-around; align-items: center; height: 120px; margin-top: 14px; }
 .slot { flex: 1; height: 100%; display: flex; align-items: center; justify-content: center; }
@@ -65,7 +64,20 @@ h1 { font-size: 20px; margin: 0; }
 .mini.no-fit { opacity: .35; }
 .mini .b, #drag .b { border-radius: 4px; }
 .mini .e, #drag .e { visibility: hidden; }
-#drag { position: fixed; display: grid; gap: 3px; pointer-events: none; z-index: 10; opacity: .92; }
+#drag { direction: ltr; position: fixed; display: grid; gap: 3px; pointer-events: none; z-index: 10; opacity: .95; filter: drop-shadow(0 8px 10px rgba(0,0,0,.25)); }
+.slot { cursor: grab; touch-action: none; }
+.cell.pop { animation: pop .18s ease-out; }
+@keyframes pop { 0% { transform: scale(.7); } 70% { transform: scale(1.08); } 100% { transform: scale(1); } }
+.cell.clearing { animation: shine .32s ease-out forwards; }
+@keyframes shine { 0% { filter: brightness(1); } 35% { filter: brightness(1.9); transform: scale(1.1); } 100% { opacity: 0; transform: scale(.4); } }
+.spark { position: fixed; z-index: 15; pointer-events: none; font-size: 18px; line-height: 1; color: #ffd75e; text-shadow: 0 0 6px rgba(255,215,94,.9); animation: fly .7s ease-out forwards; }
+@keyframes fly { to { transform: translate(var(--dx), var(--dy)) rotate(200deg) scale(.3); opacity: 0; } }
+.plus { direction: ltr; position: fixed; z-index: 16; pointer-events: none; font-weight: 800; font-size: 28px; color: var(--accent); text-shadow: 0 2px 0 rgba(0,0,0,.12); animation: rise .9s ease-out forwards; transform: translate(-50%, -50%); }
+@keyframes rise { to { transform: translate(-50%, -150%) scale(1.3); opacity: 0; } }
+.combo.bump { animation: bump .35s ease-out; }
+@keyframes bump { 50% { transform: scale(1.35); } }
+.sound { min-width: 44px; font-size: 18px; padding: 6px 10px; }
+@media (prefers-reduced-motion: reduce) { .spark, .plus { display: none; } .cell.pop, .combo.bump { animation: none; } }
 .bar { width: 100%; max-width: 480px; display: flex; justify-content: space-between; margin-top: 10px; gap: 8px; }
 button {
   font: inherit; font-size: 15px; color: var(--ink); background: var(--panel); border: 0;
@@ -86,7 +98,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 <body>
 <header>
   <div class="scores"><span class="score" id="score">0</span><span class="best">أحسن رقم: <b id="best">0</b></span></div>
-  <h1>مكعبات رص</h1>
+  <div style="display:flex;gap:8px;align-items:center"><button class="sound" id="soundBtn" aria-label="الصوت">🔊</button><h1>مكعبات رص</h1></div>
 </header>
 <div class="combo" id="combo"></div>
 <div id="board"></div>
@@ -196,7 +208,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
   }
 
   function renderTray() {
-    var mini = Math.max(14, Math.min(22, cellSize() * 0.5));
+    var mini = Math.max(16, Math.min(28, cellSize() * 0.6));
     for (var t = 0; t < 3; t++) {
       slots[t].innerHTML = '';
       var p = state.tray[t];
@@ -204,27 +216,27 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       var el = document.createElement('div');
       el.className = 'mini' + (L.fitsAnywhere(state.board, p.cells) ? '' : ' no-fit');
       buildPiece(el, p, mini, 2);
-      el.dataset.idx = t;
-      el.addEventListener('pointerdown', startDrag);
       slots[t].appendChild(el);
     }
   }
 
   // السحب
   var drag = null;
-  function startDrag(e) {
-    if (state.over) return;
+  for (var si = 0; si < 3; si++) (function (t) { slots[t].addEventListener('pointerdown', function (e) { startDrag(e, t); }); })(si);
+  function startDrag(e, idx) {
+    var piece = state.tray[idx];
+    if (state.over || !piece || drag) return;
     e.preventDefault();
-    var idx = +e.currentTarget.dataset.idx, piece = state.tray[idx];
+    sfx.unlock();
     var size = cellSize();
     var el = document.createElement('div');
     el.id = 'drag';
     var dims = buildPiece(el, piece, size, 3);
     document.body.appendChild(el);
-    e.currentTarget.style.visibility = 'hidden';
-    drag = { idx: idx, piece: piece, el: el, src: e.currentTarget, size: size, dims: dims,
+    hideSlot(idx);
+    drag = { idx: idx, piece: piece, el: el, size: size, dims: dims,
              lift: e.pointerType === 'mouse' ? 0 : size * 1.6, target: null };
-    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (x) {}
+    try { e.target.releasePointerCapture(e.pointerId); } catch (x) {}
     moveDrag(e);
   }
   function moveDrag(e) {
@@ -233,14 +245,25 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     var left = e.clientX - pw / 2, top = e.clientY - ph / 2 - drag.lift;
     drag.el.style.left = left + 'px'; drag.el.style.top = top + 'px';
     var rect = boardEl.getBoundingClientRect(), step = drag.size + 3;
-    var c = Math.round((left - rect.left - 6) / step), r = Math.round((top - rect.top - 6) / step);
-    if (L.canPlace(state.board, drag.piece.cells, r, c)) {
+    var fc = (left - rect.left - 6) / step, fr = (top - rect.top - 6) / step;
+    var spot = nearest(drag.piece.cells, fr, fc), r = spot && spot[0], c = spot && spot[1];
+    if (spot && (!drag.target || drag.target[0] !== r || drag.target[1] !== c)) {
       drag.target = [r, c];
       render(drag.piece.cells.map(function (k) { return (r + k[0]) * N + c + k[1]; }));
       hideSrc();
-    } else if (drag.target) { drag.target = null; render(); hideSrc(); }
+    } else if (!spot && drag.target) { drag.target = null; render(); hideSrc(); }
   }
-  function hideSrc() { var m = slots[drag.idx].firstChild; if (m) m.style.visibility = 'hidden'; }
+  // أقرب مكان ينفع في حدود خانة ونص من مكان الصباع — الطفل ما يحتاجش دقة
+  function nearest(cellsOf, fr, fc) {
+    var best = null, bestD = 1.6 * 1.6;
+    for (var r = Math.floor(fr) - 1; r <= Math.ceil(fr) + 1; r++) for (var c = Math.floor(fc) - 1; c <= Math.ceil(fc) + 1; c++) {
+      var d = (r - fr) * (r - fr) + (c - fc) * (c - fc);
+      if (d < bestD && L.canPlace(state.board, cellsOf, r, c)) { bestD = d; best = [r, c]; }
+    }
+    return best;
+  }
+  function hideSlot(t) { var m = slots[t].firstChild; if (m) m.style.visibility = 'hidden'; }
+  function hideSrc() { hideSlot(drag.idx); }
   function endDrag() {
     if (!drag) return;
     var d = drag; drag = null;
@@ -259,11 +282,15 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     activity();
     if (state.score > best) { best = state.score; store('rass.best', String(best)); }
     save();
+    render();
+    piece.cells.forEach(function (k) { var i = (r + k[0]) * N + c + k[1]; if (state.board[i]) cells[i].classList.add('pop'); });
     if (res.lines) {
-      render();
-      res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; });
-      setTimeout(function () { render(); afterMove(); }, 230);
-    } else { render(); afterMove(); }
+      sfx.clear(res.lines, res.combo);
+      res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; sparkle(cells[k]); });
+      plus('+' + res.gained);
+      if (state.combo >= 2) { var cb = $('combo'); cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump'); }
+      setTimeout(function () { render(); afterMove(); }, 330);
+    } else { sfx.place(); afterMove(); }
   }
   function afterMove() {
     if (state.over) {
@@ -271,9 +298,59 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       $('overUndo').style.display = state.undoUsed ? 'none' : '';
       $('finalBest').textContent = state.score >= best && state.score > 0 ? 'ده أحسن رقم ليك لحد دلوقتي' : 'أحسن رقم ليك: ' + best;
       try { localStorage.removeItem('rass.game'); } catch (e) {}
-      setTimeout(function () { show('overO'); }, 350);
+      setTimeout(function () { sfx.end(); show('overO'); }, 350);
     }
   }
+
+  function sparkle(cellEl) {
+    var b = cellEl.getBoundingClientRect(), stars = ['✦', '★', '✧'];
+    for (var i = 0; i < 2; i++) {
+      var s = document.createElement('div');
+      s.className = 'spark';
+      s.textContent = stars[(Math.random() * 3) | 0];
+      s.style.left = (b.left + b.width / 2 - 9) + 'px'; s.style.top = (b.top + b.height / 2 - 9) + 'px';
+      var a = Math.random() * Math.PI * 2, dist = 40 + Math.random() * 50;
+      s.style.setProperty('--dx', Math.cos(a) * dist + 'px'); s.style.setProperty('--dy', Math.sin(a) * dist + 'px');
+      document.body.appendChild(s);
+      setTimeout(function (x) { return function () { x.remove(); }; }(s), 750);
+    }
+  }
+  function plus(text) {
+    var b = boardEl.getBoundingClientRect(), el = document.createElement('div');
+    el.className = 'plus'; el.textContent = text;
+    el.style.left = (b.left + b.width / 2) + 'px'; el.style.top = (b.top + b.height / 2) + 'px';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 950);
+  }
+
+  // الصوت: نغمات بتتعمل بالكود (من غير ملفات)، وله زرار يقفله ويفتحه
+  var sfx = (function () {
+    var ctx = null, on = store('rass.sound') !== 'off';
+    function tone(freq, start, dur, vol, type) {
+      if (!on || !ctx) return;
+      var o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + start;
+      o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + dur + 0.02);
+    }
+    var scale = [523, 587, 659, 784, 880, 1047, 1175, 1319];
+    return {
+      unlock: function () {
+        if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+        if (ctx && ctx.state === 'suspended') ctx.resume();
+      },
+      place: function () { tone(330, 0, 0.09, 0.18, 'triangle'); },
+      clear: function (lines, combo) {
+        var base = Math.min(combo - 1, 3);
+        for (var i = 0; i < 2 + lines; i++) tone(scale[Math.min(base + i, scale.length - 1)], i * 0.07, 0.22, 0.16, 'triangle');
+      },
+      end: function () { tone(392, 0, 0.4, 0.12); tone(330, 0.18, 0.5, 0.1); },
+      toggle: function () { on = !on; store('rass.sound', on ? 'on' : 'off'); return on; },
+      get on() { return on; }
+    };
+  })();
+  $('soundBtn').textContent = sfx.on ? '🔊' : '🔇';
+  $('soundBtn').onclick = function () { sfx.unlock(); $('soundBtn').textContent = sfx.toggle() ? '🔊' : '🔇'; };
 
   function show(id) { $(id).classList.add('show'); }
   function hide(id) { $(id).classList.remove('show'); }
