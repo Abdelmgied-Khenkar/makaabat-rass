@@ -43,7 +43,7 @@ body {
   overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none;
 }
 header { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-h1 { font-size: 20px; margin: 0; }
+h1 { font-size: 20px; margin: 0; white-space: nowrap; }
 .scores { display: flex; gap: 16px; align-items: baseline; }
 .score { font-size: 30px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .best { color: var(--soft); font-size: 14px; }
@@ -85,6 +85,7 @@ h1 { font-size: 20px; margin: 0; }
   -webkit-text-stroke: 2px rgba(0,0,0,.15); text-shadow: 0 4px 0 rgba(0,0,0,.15), 0 0 18px rgba(255,255,255,.6);
   animation: praise 1.2s cubic-bezier(.2,1.4,.4,1) forwards; transform: translate(-50%, -50%); white-space: nowrap; }
 @keyframes praise { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 18% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 30% { transform: translate(-50%,-50%) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%,-90%) scale(1); opacity: 0; } }
+.lang { font-size: 14px; font-weight: 700; }
 .sound { min-width: 44px; font-size: 18px; padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .spark, .plus { display: none; } .praise { animation-duration: .01s; animation-delay: 1s; } .cell.pop, .combo.bump { animation: none; } }
 .bar { width: 100%; max-width: 480px; display: flex; justify-content: space-between; margin-top: 10px; gap: 8px; }
@@ -106,8 +107,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 </head>
 <body>
 <header>
-  <div class="scores"><span class="score" id="score">0</span><span class="best">أحسن رقم: <b id="best">0</b></span></div>
-  <div style="display:flex;gap:8px;align-items:center"><button class="sound" id="soundBtn" aria-label="الصوت">🔊</button><h1>مكعبات رص</h1></div>
+  <div class="scores"><span class="score" id="score">0</span><span class="best"><span data-i="best">أحسن رقم</span>: <b id="best">0</b></span></div>
+  <div style="display:flex;gap:8px;align-items:center"><button class="sound lang" id="langBtn">EN</button><button class="sound" id="soundBtn" aria-label="sound">🔊</button><h1 data-i="name">مكعبات رص</h1></div>
 </header>
 <div class="levelbar"><span class="lvl" id="lvl">ليفل 1</span><span class="prog"><i id="prog"></i></span></div>
 <div class="combo" id="combo"></div>
@@ -115,46 +116,34 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 <div id="tray"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
 <div class="bar">
   <button id="undo">تراجع (مرة)</button>
-  <button id="howBtn">إزاي بتشتغل</button>
-  <button id="newBtn">جولة جديدة</button>
+  <button id="howBtn" data-i="how">إزاي بتشتغل</button>
+  <button id="newBtn" data-i="newGame">جولة جديدة</button>
 </div>
 
 <div class="overlay" id="overO"><div class="card">
-  <h2>خلصت الجولة</h2>
+  <h2 data-i="over">خلصت الجولة</h2>
   <div class="big" id="finalScore">0</div>
   <p style="text-align:center" id="finalBest"></p>
-  <div class="row"><button class="main" id="againBtn">جولة جديدة</button><button id="overUndo">تراجع عن آخر حركة</button></div>
+  <div class="row"><button class="main" id="againBtn" data-i="newGame">جولة جديدة</button><button id="overUndo" data-i="undoLast">تراجع عن آخر حركة</button></div>
 </div></div>
 
 <div class="overlay" id="timeO"><div class="card">
-  <h2>لعبت ٢٠ دقيقة</h2>
-  <p style="text-align:center">تحب تكمّل؟</p>
-  <div class="row"><button class="main" id="contBtn">أكمّل</button><button id="enoughBtn">كفاية النهارده</button></div>
+  <h2 data-i="t20">لعبت ٢٠ دقيقة</h2>
+  <p style="text-align:center" data-i="keepQ">تحب تكمّل؟</p>
+  <div class="row"><button class="main" id="contBtn" data-i="keep">أكمّل</button><button id="enoughBtn" data-i="enough">كفاية النهارده</button></div>
 </div></div>
 
 <div class="overlay" id="byeO"><div class="card">
-  <h2>نشوفك بعدين</h2>
-  <p style="text-align:center">رقمك النهارده: <b id="byeScore">0</b></p>
-  <p style="text-align:center">الجولة محفوظة هنا لحد ما ترجع.</p>
-  <div class="row"><button id="byeClose">تمام</button></div>
+  <h2 data-i="bye">نشوفك بعدين</h2>
+  <p style="text-align:center"><span data-i="today">رقمك النهارده</span>: <b id="byeScore">0</b></p>
+  <p style="text-align:center" data-i="saved">الجولة محفوظة هنا لحد ما ترجع.</p>
+  <div class="row"><button id="byeClose" data-i="ok">تمام</button></div>
 </div></div>
 
 <div class="overlay" id="howO"><div class="card">
-  <h2>إزاي بتشتغل</h2>
-  <ul>
-    <li>اسحب أي قطعة من التلاتة وحطها على اللوح.</li>
-    <li>لما صف أو عمود يتملي كله، بيتمسح.</li>
-    <li>كل مربع تحطه بنقطة. خط واحد بـ١٠، خطين مع بعض بـ٤٠، تلاتة بـ٩٠.</li>
-    <li>لو مسحت حركة ورا حركة، النقط بتتضرب في الكومبو (×٢، ×٣…). لو عدّت ٣ قطع من غير مسح، الكومبو يرجع من الأول.</li>
-    <li>القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.</li>
-    <li>الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.</li>
-    <li>لما تمسح خطوط، الكمبيوتر بيشجّعك: Nice (خط) · Good (خطين، +٢٠) · Very good (٣، +٥٠) · Excellent (٤ أو أكتر، +١٠٠) · Amazing لو اللوح فضي خالص (+٣٠٠).</li>
-    <li>كل ليفل ليه عالم وألوان: الحديقة، البحر، الصحرا، الفضا، الحلويات، الغابة.</li>
-    <li>الليفلات: أول ليفل قطعه صغيرة وسهلة. كل ما تمسح خطوط بتطلع ليفل، والأشكال الأكبر بتدخل. كل جولة جديدة بتبدأ من ليفل ١.</li>
-    <li>عندك تراجع واحد ببلاش في كل جولة.</li>
-    <li>مفيش إعلانات، ومفيش حاجة بتضيع لو غبت.</li>
-  </ul>
-  <div class="row"><button class="main" id="howClose">تمام</button></div>
+  <h2 data-i="how">إزاي بتشتغل</h2>
+  <ul id="howList"></ul>
+  <div class="row"><button class="main" id="howClose" data-i="ok">تمام</button></div>
 </div></div>
 
 <script src="logic.js"></script>
@@ -162,6 +151,65 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
 (function () {
   'use strict';
   var L = window.RassLogic, N = L.SIZE;
+
+  // عربي وإنجليزي (بطلبه 2026-10-10 22:48 «make it arabic and english so u can change the language»)
+  var T = {
+    ar: {
+      name: 'مكعبات رص', best: 'أحسن رقم', how: 'إزاي بتشتغل', newGame: 'جولة جديدة', over: 'خلصت الجولة', undoLast: 'تراجع عن آخر حركة',
+      undo: 'تراجع (مرة)', undoUsed: 'التراجع: استُخدم', level: 'ليفل', combo: 'كومبو ×', bestYet: 'ده أحسن رقم ليك لحد دلوقتي', yourBest: 'أحسن رقم ليك: ',
+      t20: 'لعبت ٢٠ دقيقة', keepQ: 'تحب تكمّل؟', keep: 'أكمّل', enough: 'كفاية النهارده', bye: 'نشوفك بعدين', today: 'رقمك النهارده',
+      saved: 'الجولة محفوظة هنا لحد ما ترجع.', ok: 'تمام', other: 'EN',
+      themes: ['الحديقة 🌷', 'البحر 🐠', 'الصحرا 🐪', 'الفضا 🚀', 'الحلويات 🍭', 'الغابة 🌳'],
+      praise: { 'Nice!': 'حلو!', 'Good!': 'شاطر!', 'Very good!': 'برافو!', 'Excellent!': 'ممتاز!', 'Amazing!': 'رهيب!' },
+      levelUp: 'ليفل ',
+      rules: [
+        'اسحب أي قطعة من التلاتة وحطها على اللوح.',
+        'لما صف أو عمود يتملي كله، بيتمسح.',
+        'كل مربع تحطه بنقطة. خط واحد بـ١٠، خطين مع بعض بـ٤٠، تلاتة بـ٩٠.',
+        'لو مسحت حركة ورا حركة، النقط بتتضرب في الكومبو (×٢، ×٣…). لو عدّت ٣ قطع من غير مسح، الكومبو يرجع من الأول.',
+        'لما تمسح خطوط، الكمبيوتر بيشجّعك: حلو (خط) · شاطر (خطين، +٢٠) · برافو (٣، +٥٠) · ممتاز (٤ أو أكتر، +١٠٠) · رهيب لو اللوح فضي خالص (+٣٠٠).',
+        'الليفلات: أول ليفل قطعه صغيرة وسهلة. كل ما تمسح خطوط بتطلع ليفل، والأشكال الأكبر بتدخل. كل جولة جديدة بتبدأ من ليفل ١.',
+        'كل ليفل ليه عالم وألوان: الحديقة، البحر، الصحرا، الفضا، الحلويات، الغابة.',
+        'القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.',
+        'الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.',
+        'عندك تراجع واحد ببلاش في كل جولة.',
+        'مفيش إعلانات، ومفيش حاجة بتضيع لو غبت.'
+      ]
+    },
+    en: {
+      name: 'Rass Blocks', best: 'Best', how: 'How it works', newGame: 'New game', over: 'Round over', undoLast: 'Undo last move',
+      undo: 'Undo (once)', undoUsed: 'Undo: used', level: 'Level', combo: 'Combo ×', bestYet: 'Your best score yet!', yourBest: 'Your best: ',
+      t20: 'You played 20 minutes', keepQ: 'Want to keep going?', keep: 'Keep going', enough: "That's enough today", bye: 'See you later', today: "Today's score",
+      saved: 'Your game is saved here until you come back.', ok: 'OK', other: 'ع',
+      themes: ['Garden 🌷', 'Sea 🐠', 'Desert 🐪', 'Space 🚀', 'Sweets 🍭', 'Forest 🌳'],
+      praise: {},
+      levelUp: 'Level ',
+      rules: [
+        'Drag any of the three pieces onto the board.',
+        'When a row or a column is full, it clears.',
+        'Each square you place is 1 point. One line is 10, two lines together 40, three 90.',
+        'Clear move after move and your points multiply by the combo (×2, ×3…). Three pieces in a row without a clear resets the combo.',
+        'When you clear lines the computer cheers: Nice (1 line) · Good (2, +20) · Very good (3, +50) · Excellent (4 or more, +100) · Amazing when the board is completely empty (+300).',
+        'Levels: the first level has small, easy pieces. Clearing lines moves you up a level and bigger shapes join in. Every new game starts at level 1.',
+        'Every level has its own world and colors: Garden, Sea, Desert, Space, Sweets, Forest.',
+        'Pieces are random. The only rule: at least one of them always fits when they appear. No hidden tricks.',
+        'The round ends when none of the remaining pieces fits.',
+        'You get one free undo every round.',
+        'No ads, and nothing is lost if you take a break.'
+      ]
+    }
+  };
+  var lang = (function () { try { var v = localStorage.getItem('rass.lang'); if (v) return v; } catch (e) {} return (navigator.language || 'ar').slice(0, 2) === 'ar' ? 'ar' : 'en'; })();
+  function tr(k) { return T[lang][k]; }
+  function applyLang() {
+    document.documentElement.lang = lang;
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.title = tr('name');
+    document.querySelectorAll('[data-i]').forEach(function (el) { el.textContent = tr(el.getAttribute('data-i')); });
+    document.getElementById('howList').innerHTML = '';
+    tr('rules').forEach(function (r) { var li = document.createElement('li'); li.textContent = r; document.getElementById('howList').appendChild(li); });
+    document.getElementById('langBtn').textContent = tr('other');
+  }
   var $ = function (id) { return document.getElementById(id); };
   var boardEl = $('board'), slots = document.querySelectorAll('.slot');
   var cells = [];
@@ -195,12 +243,12 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     $('score').textContent = state.score;
     $('best').textContent = best;
     applyTheme(state.level);
-    $('lvl').textContent = 'ليفل ' + state.level + ' · ' + themeName(state.level);
+    $('lvl').textContent = tr('level') + ' ' + state.level + ' · ' + themeName(state.level);
     var at = [0, 3, 8, 15], lv = state.level, lo = lv <= 3 ? at[lv - 1] : 15 + (lv - 4) * 10, hi = lv <= 3 ? at[lv] : lo + 10;
     $('prog').style.width = Math.min(100, (state.lines - lo) / (hi - lo) * 100) + '%';
-    $('combo').textContent = state.combo >= 2 ? 'كومبو ×' + state.combo : '';
+    $('combo').textContent = state.combo >= 2 ? tr('combo') + state.combo : '';
     $('undo').disabled = state.undoUsed || !state.snapshot;
-    $('undo').textContent = state.undoUsed ? 'التراجع: استُخدم' : 'تراجع (مرة)';
+    $('undo').textContent = state.undoUsed ? tr('undoUsed') : tr('undo');
     renderTray();
   }
 
@@ -306,7 +354,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; sparkle(cells[k]); });
       plus('+' + res.gained);
       if (res.praise) cheer(res.praise.word, res.praise.bonus ? ' +' + res.praise.bonus : '');
-      if (res.leveledUp) setTimeout(function () { cheer('Level ' + res.level + '!', ''); plus(themeName(res.level)); sfx.levelUp(); }, 1250);
+      if (res.leveledUp) setTimeout(function () { cheer(tr('levelUp') + res.level + '!', '', 'Level ' + res.level); plus(themeName(res.level)); sfx.levelUp(); }, 1250);
       if (state.combo >= 2) { var cb = $('combo'); cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump'); }
       setTimeout(function () { render(); afterMove(); }, 330);
     } else { sfx.place(); afterMove(); }
@@ -315,7 +363,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     if (state.over) {
       $('finalScore').textContent = state.score;
       $('overUndo').style.display = state.undoUsed ? 'none' : '';
-      $('finalBest').textContent = state.score >= best && state.score > 0 ? 'ده أحسن رقم ليك لحد دلوقتي' : 'أحسن رقم ليك: ' + best;
+      $('finalBest').textContent = state.score >= best && state.score > 0 ? tr('bestYet') : tr('yourBest') + best;
       try { localStorage.removeItem('rass.game'); } catch (e) {}
       setTimeout(function () { sfx.end(); show('overO'); }, 350);
     }
@@ -335,14 +383,15 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     }
   }
   var CHEER_COLORS = { 'Nice!': 'var(--c4)', 'Good!': 'var(--c3)', 'Very good!': 'var(--c5)', 'Excellent!': 'var(--c1)', 'Amazing!': 'var(--c6)' };
-  function cheer(word, extra) {
+  function cheer(word, extra, speakEn) {
+    var shown = tr('praise')[word] || word;
     var b = boardEl.getBoundingClientRect(), el = document.createElement('div');
-    el.className = 'praise'; el.textContent = word + extra;
+    el.className = 'praise'; el.textContent = shown + extra;
     el.style.top = (b.top + b.height * 0.32) + 'px';
     el.style.color = CHEER_COLORS[word] || 'var(--c2)';
     document.body.appendChild(el);
     setTimeout(function () { el.remove(); }, 1250);
-    sfx.say(word.replace('!', ''));
+    sfx.say(shown.replace('!', ''), lang, (speakEn || word).replace('!', ''));
   }
   function plus(text) {
     var b = boardEl.getBoundingClientRect(), el = document.createElement('div');
@@ -379,7 +428,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     t.c.forEach(function (col, k) { st.setProperty('--c' + (k + 1), col); });
     var meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.setAttribute('content', t.bg);
   }
-  function themeName(level) { return THEMES[(level - 1) % THEMES.length].name; }
+  function themeName(level) { return tr('themes')[(level - 1) % THEMES.length]; }
 
   // الصوت: نغمات بتتعمل بالكود (من غير ملفات)، وله زرار يقفله ويفتحه
   var sfx = (function () {
@@ -402,12 +451,14 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
         var base = Math.min(combo - 1, 3);
         for (var i = 0; i < 2 + lines; i++) tone(scale[Math.min(base + i, scale.length - 1)], i * 0.07, 0.22, 0.16, 'triangle');
       },
-      say: function (text) {
+      // بالعربي لو الجهاز فيه صوت عربي، وإلا بالإنجليزي
+      say: function (text, lg, enText) {
         if (!on || !window.speechSynthesis) return;
         try {
           speechSynthesis.cancel();
-          var u = new SpeechSynthesisUtterance(text);
-          u.lang = 'en-US'; u.rate = 1; u.pitch = 1.3; u.volume = 1;
+          var hasAr = lg === 'ar' && speechSynthesis.getVoices().some(function (v) { return /^ar/i.test(v.lang); });
+          var u = new SpeechSynthesisUtterance(lg === 'ar' && hasAr ? text : enText);
+          u.lang = lg === 'ar' && hasAr ? 'ar' : 'en-US'; u.rate = 1; u.pitch = 1.3; u.volume = 1;
           speechSynthesis.speak(u);
         } catch (e) {}
       },
@@ -417,6 +468,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       get on() { return on; }
     };
   })();
+  $('langBtn').onclick = function () { lang = lang === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('rass.lang', lang); } catch (e) {} applyLang(); render(); };
+  applyLang();
   $('soundBtn').textContent = sfx.on ? '🔊' : '🔇';
   $('soundBtn').onclick = function () { sfx.unlock(); $('soundBtn').textContent = sfx.toggle() ? '🔊' : '🔇'; };
 
