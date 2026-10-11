@@ -76,8 +76,16 @@ h1 { font-size: 20px; margin: 0; }
 @keyframes rise { to { transform: translate(-50%, -150%) scale(1.3); opacity: 0; } }
 .combo.bump { animation: bump .35s ease-out; }
 @keyframes bump { 50% { transform: scale(1.35); } }
+.levelbar { width: 100%; max-width: 480px; display: flex; justify-content: space-between; align-items: center; margin-top: 6px; }
+.lvl { background: var(--panel); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 15px; }
+.prog { flex: 1; height: 8px; background: var(--panel); border-radius: 999px; margin-inline-start: 10px; overflow: hidden; }
+.prog i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--c2), var(--c1)); border-radius: 999px; transition: width .3s; }
+.praise { direction: ltr; position: fixed; z-index: 17; pointer-events: none; left: 50%; font-weight: 900; font-size: 46px; letter-spacing: .5px;
+  -webkit-text-stroke: 2px rgba(0,0,0,.15); text-shadow: 0 4px 0 rgba(0,0,0,.15), 0 0 18px rgba(255,255,255,.6);
+  animation: praise 1.2s cubic-bezier(.2,1.4,.4,1) forwards; transform: translate(-50%, -50%); white-space: nowrap; }
+@keyframes praise { 0% { transform: translate(-50%,-50%) scale(.3); opacity: 0; } 18% { transform: translate(-50%,-50%) scale(1.15); opacity: 1; } 30% { transform: translate(-50%,-50%) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%,-90%) scale(1); opacity: 0; } }
 .sound { min-width: 44px; font-size: 18px; padding: 6px 10px; }
-@media (prefers-reduced-motion: reduce) { .spark, .plus { display: none; } .cell.pop, .combo.bump { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .spark, .plus { display: none; } .praise { animation-duration: .01s; animation-delay: 1s; } .cell.pop, .combo.bump { animation: none; } }
 .bar { width: 100%; max-width: 480px; display: flex; justify-content: space-between; margin-top: 10px; gap: 8px; }
 button {
   font: inherit; font-size: 15px; color: var(--ink); background: var(--panel); border: 0;
@@ -100,6 +108,7 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
   <div class="scores"><span class="score" id="score">0</span><span class="best">أحسن رقم: <b id="best">0</b></span></div>
   <div style="display:flex;gap:8px;align-items:center"><button class="sound" id="soundBtn" aria-label="الصوت">🔊</button><h1>مكعبات رص</h1></div>
 </header>
+<div class="levelbar"><span class="lvl" id="lvl">ليفل 1</span><span class="prog"><i id="prog"></i></span></div>
 <div class="combo" id="combo"></div>
 <div id="board"></div>
 <div id="tray"><div class="slot"></div><div class="slot"></div><div class="slot"></div></div>
@@ -138,6 +147,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     <li>لو مسحت حركة ورا حركة، النقط بتتضرب في الكومبو (×٢، ×٣…). لو عدّت ٣ قطع من غير مسح، الكومبو يرجع من الأول.</li>
     <li>القطع بتطلع عشوائي، والشرط الوحيد إن واحدة منهم على الأقل يكون ليها مكان وقت ما تظهر. مفيش تحكّم مخفي.</li>
     <li>الجولة بتخلص لما ولا قطعة من الباقيين يبقى ليها مكان.</li>
+    <li>لما تمسح خطوط، الكمبيوتر بيشجّعك: Nice (خط) · Good (خطين، +٢٠) · Very good (٣، +٥٠) · Excellent (٤ أو أكتر، +١٠٠) · Amazing لو اللوح فضي خالص (+٣٠٠).</li>
+    <li>الليفلات: أول ليفل قطعه صغيرة وسهلة. كل ما تمسح خطوط بتطلع ليفل، والأشكال الأكبر بتدخل. كل جولة جديدة بتبدأ من ليفل ١.</li>
     <li>عندك تراجع واحد ببلاش في كل جولة.</li>
     <li>مفيش إعلانات، ومفيش حاجة بتضيع لو غبت.</li>
   </ul>
@@ -159,14 +170,14 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
   var state;
 
   function save() {
-    try { store('rass.game', JSON.stringify({ board: state.board, tray: state.tray, score: state.score, combo: state.combo, noClear: state.noClear, undoUsed: state.undoUsed })); } catch (e) {}
+    try { store('rass.game', JSON.stringify({ board: state.board, tray: state.tray, score: state.score, combo: state.combo, noClear: state.noClear, undoUsed: state.undoUsed, lines: state.lines, level: state.level })); } catch (e) {}
   }
   function load() {
     try {
       var s = JSON.parse(store('rass.game'));
       if (!s || !s.board || s.board.length !== N * N) return null;
       var g = L.newGame(Math.random);
-      g.board = s.board; g.tray = s.tray; g.score = s.score; g.combo = s.combo; g.noClear = s.noClear; g.undoUsed = !!s.undoUsed;
+      g.board = s.board; g.tray = s.tray; g.score = s.score; g.combo = s.combo; g.noClear = s.noClear; g.undoUsed = !!s.undoUsed; g.lines = s.lines || 0; g.level = s.level || 1;
       g.over = L.isOver(g);
       return g.over ? null : g;
     } catch (e) { return null; }
@@ -181,6 +192,9 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
     if (ghost) ghost.forEach(function (k) { cells[k].className = 'cell ghost'; });
     $('score').textContent = state.score;
     $('best').textContent = best;
+    $('lvl').textContent = 'ليفل ' + state.level;
+    var at = [0, 3, 8, 15], lv = state.level, lo = lv <= 3 ? at[lv - 1] : 15 + (lv - 4) * 10, hi = lv <= 3 ? at[lv] : lo + 10;
+    $('prog').style.width = Math.min(100, (state.lines - lo) / (hi - lo) * 100) + '%';
     $('combo').textContent = state.combo >= 2 ? 'كومبو ×' + state.combo : '';
     $('undo').disabled = state.undoUsed || !state.snapshot;
     $('undo').textContent = state.undoUsed ? 'التراجع: استُخدم' : 'تراجع (مرة)';
@@ -288,6 +302,8 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       sfx.clear(res.lines, res.combo);
       res.cleared.forEach(function (k) { cells[k].className = 'cell filled f' + pre[k] + ' clearing'; sparkle(cells[k]); });
       plus('+' + res.gained);
+      if (res.praise) cheer(res.praise.word, res.praise.bonus ? ' +' + res.praise.bonus : '');
+      if (res.leveledUp) setTimeout(function () { cheer('Level ' + res.level + '!', ''); sfx.levelUp(); }, 1250);
       if (state.combo >= 2) { var cb = $('combo'); cb.classList.remove('bump'); void cb.offsetWidth; cb.classList.add('bump'); }
       setTimeout(function () { render(); afterMove(); }, 330);
     } else { sfx.place(); afterMove(); }
@@ -314,6 +330,16 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
       document.body.appendChild(s);
       setTimeout(function (x) { return function () { x.remove(); }; }(s), 750);
     }
+  }
+  var CHEER_COLORS = { 'Nice!': 'var(--c4)', 'Good!': 'var(--c3)', 'Very good!': 'var(--c5)', 'Excellent!': 'var(--c1)', 'Amazing!': 'var(--c6)' };
+  function cheer(word, extra) {
+    var b = boardEl.getBoundingClientRect(), el = document.createElement('div');
+    el.className = 'praise'; el.textContent = word + extra;
+    el.style.top = (b.top + b.height * 0.32) + 'px';
+    el.style.color = CHEER_COLORS[word] || 'var(--c2)';
+    document.body.appendChild(el);
+    setTimeout(function () { el.remove(); }, 1250);
+    sfx.say(word.replace('!', ''));
   }
   function plus(text) {
     var b = boardEl.getBoundingClientRect(), el = document.createElement('div');
@@ -344,6 +370,16 @@ button.main { background: var(--accent); color: #fff; font-weight: 700; }
         var base = Math.min(combo - 1, 3);
         for (var i = 0; i < 2 + lines; i++) tone(scale[Math.min(base + i, scale.length - 1)], i * 0.07, 0.22, 0.16, 'triangle');
       },
+      say: function (text) {
+        if (!on || !window.speechSynthesis) return;
+        try {
+          speechSynthesis.cancel();
+          var u = new SpeechSynthesisUtterance(text);
+          u.lang = 'en-US'; u.rate = 1; u.pitch = 1.3; u.volume = 1;
+          speechSynthesis.speak(u);
+        } catch (e) {}
+      },
+      levelUp: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, i * 0.09, 0.3, 0.16, 'triangle'); }); },
       end: function () { tone(392, 0, 0.4, 0.12); tone(330, 0.18, 0.5, 0.1); },
       toggle: function () { on = !on; store('rass.sound', on ? 'on' : 'off'); return on; },
       get on() { return on; }

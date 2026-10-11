@@ -34,6 +34,32 @@
     [[0, 0], [0, 1], [0, 2], [1, 1]], [[0, 1], [1, 0], [1, 1], [1, 2]]
   ];
 
+  // الليفلات: أول ليفل قطع صغيرة سهلة التعشيق، وكل ليفل يدخل أشكال أكبر (بطلب المعماري 2026-10-10 22:40)
+  var POOLS = [
+    [0, 1, 2, 3, 4, 9, 11, 12, 13, 14],
+    [0, 1, 2, 3, 4, 9, 11, 12, 13, 14, 5, 6, 19, 20],
+    [0, 1, 2, 3, 4, 9, 11, 12, 13, 14, 5, 6, 19, 20, 15, 16, 17, 18],
+    null // كل الأشكال
+  ];
+  var LEVEL_AT = [3, 8, 15]; // عدد الخطوط اللي تطلّعك ليفل 2 و3 و4، وبعدها ليفل كل 10 خطوط
+  function levelFor(lines) {
+    var lv = 1;
+    for (var i = 0; i < LEVEL_AT.length; i++) if (lines >= LEVEL_AT[i]) lv++;
+    if (lines >= LEVEL_AT[LEVEL_AT.length - 1]) lv += Math.floor((lines - LEVEL_AT[LEVEL_AT.length - 1]) / 10);
+    return lv;
+  }
+  function poolFor(level) { return POOLS[Math.min(level, POOLS.length) - 1]; }
+
+  // التشجيع: كلمة + بونس حسب عدد الخطوط اللي اتمسحت مع بعض
+  function praiseFor(lines, boardEmpty) {
+    if (boardEmpty) return { word: 'Amazing!', bonus: 300 };
+    if (lines >= 4) return { word: 'Excellent!', bonus: 100 };
+    if (lines === 3) return { word: 'Very good!', bonus: 50 };
+    if (lines === 2) return { word: 'Good!', bonus: 20 };
+    if (lines === 1) return { word: 'Nice!', bonus: 0 };
+    return null;
+  }
+
   function emptyBoard() {
     var b = [];
     for (var i = 0; i < SIZE * SIZE; i++) b.push(0);
@@ -54,16 +80,17 @@
     return false;
   }
 
-  function randomPiece(rng) {
-    var s = Math.floor(rng() * SHAPES.length);
+  function randomPiece(rng, level) {
+    var pool = poolFor(level || 99);
+    var s = pool ? pool[Math.floor(rng() * pool.length)] : Math.floor(rng() * SHAPES.length);
     return { shape: s, cells: SHAPES[s], color: 1 + Math.floor(rng() * COLORS) };
   }
 
   // الشرط الوحيد المعلن: قطعة واحدة على الأقل ليها مكان وقت ما تظهر. مفيش تحكّم تاني.
-  function dealTray(board, rng) {
+  function dealTray(board, rng, level) {
     var tray;
     for (var attempt = 0; attempt < 50; attempt++) {
-      tray = [randomPiece(rng), randomPiece(rng), randomPiece(rng)];
+      tray = [randomPiece(rng, level), randomPiece(rng, level), randomPiece(rng, level)];
       for (var i = 0; i < 3; i++) if (fitsAnywhere(board, tray[i].cells)) return tray;
     }
     return tray; // ما لقيناش — الجولة هتخلص طبيعي
@@ -75,7 +102,9 @@
       tray: state.tray.slice(),
       score: state.score,
       combo: state.combo,
-      noClear: state.noClear
+      noClear: state.noClear,
+      lines: state.lines,
+      level: state.level
     };
   }
 
@@ -83,7 +112,7 @@
     rng = rng || Math.random;
     var board = emptyBoard();
     return {
-      board: board, tray: dealTray(board, rng), score: 0, combo: 0, noClear: 0,
+      board: board, tray: dealTray(board, rng, 1), score: 0, combo: 0, noClear: 0, lines: 0, level: 1,
       undoUsed: false, snapshot: null, over: false, rng: rng
     };
   }
@@ -121,34 +150,39 @@
     Object.keys(clearedCells).forEach(function (key) { b[key] = 0; });
 
     var lines = rows.length + cols.length;
-    var gained = piece.cells.length;
+    var gained = piece.cells.length, praise = null, leveledUp = false;
     if (lines > 0) {
       state.combo += 1;
       state.noClear = 0;
       gained += 10 * lines * lines * state.combo;
+      praise = praiseFor(lines, b.every(function (v) { return !v; }));
+      gained += praise.bonus;
+      state.lines += lines;
+      var lv = levelFor(state.lines);
+      if (lv > state.level) { state.level = lv; leveledUp = true; }
     } else {
       state.noClear += 1;
       if (state.noClear >= RESET_AFTER) state.combo = 0;
     }
     state.score += gained;
 
-    if (!state.tray[0] && !state.tray[1] && !state.tray[2]) state.tray = dealTray(b, state.rng);
+    if (!state.tray[0] && !state.tray[1] && !state.tray[2]) state.tray = dealTray(b, state.rng, state.level);
     state.over = isOver(state);
 
-    return { lines: lines, rows: rows, cols: cols, cleared: Object.keys(clearedCells).map(Number), gained: gained, combo: state.combo };
+    return { lines: lines, rows: rows, cols: cols, cleared: Object.keys(clearedCells).map(Number), gained: gained, combo: state.combo, praise: praise, leveledUp: leveledUp, level: state.level };
   }
 
   // التراجع مرة واحدة ببلاش في الجولة.
   function undo(state) {
     if (state.undoUsed || !state.snapshot) return false;
     var s = state.snapshot;
-    state.board = s.board; state.tray = s.tray; state.score = s.score; state.combo = s.combo; state.noClear = s.noClear;
+    state.board = s.board; state.tray = s.tray; state.score = s.score; state.combo = s.combo; state.noClear = s.noClear; state.lines = s.lines; state.level = s.level;
     state.snapshot = null; state.undoUsed = true; state.over = false;
     return true;
   }
 
   return {
-    SIZE: SIZE, SHAPES: SHAPES, RESET_AFTER: RESET_AFTER,
+    SIZE: SIZE, SHAPES: SHAPES, RESET_AFTER: RESET_AFTER, POOLS: POOLS, levelFor: levelFor, praiseFor: praiseFor,
     emptyBoard: emptyBoard, canPlace: canPlace, fitsAnywhere: fitsAnywhere,
     dealTray: dealTray, newGame: newGame, place: place, undo: undo, isOver: isOver
   };

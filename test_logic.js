@@ -33,8 +33,10 @@ test('وضع قانوني وغير قانوني', function () {
 test('مسح صف + نقطه (خط واحد = 10 + الخلايا)', function () {
   var g = game([ONE, ONE, ONE]);
   for (var c = 1; c < N; c++) g.board[c] = 2;
+  g.board[7 * N] = 3; // عشان اللوح ما يفضاش (وإلا Amazing)
   var res = L.place(g, 0, 0, 0);
   assert.strictEqual(res.lines, 1);
+  assert.strictEqual(res.praise.word, 'Nice!');
   assert.deepStrictEqual(res.rows, [0]);
   assert.strictEqual(res.gained, 1 + 10);
   for (var c2 = 0; c2 < N; c2++) assert.strictEqual(g.board[c2], 0);
@@ -55,7 +57,8 @@ test('صف وعمود مع بعض — الخلية المشتركة تتحسب �
   var res = L.place(g, 0, 2, 5);
   assert.strictEqual(res.lines, 2);
   assert.strictEqual(res.cleared.length, 15);
-  assert.strictEqual(res.gained, 1 + 40);
+  assert.strictEqual(res.gained, 1 + 40 + 300, 'اللوح فضي ⇒ Amazing +300');
+  assert.strictEqual(res.praise.word, 'Amazing!');
   assert.ok(g.board.every(function (v) { return v === 0; }));
 });
 
@@ -66,7 +69,7 @@ test('الكومبو بيتراكم، ويرجع صفر بعد 3 قطع من غ�
   assert.strictEqual(a.combo, 1);
   var b = L.place(g, 1, 1, 0);
   assert.strictEqual(b.combo, 2);
-  assert.strictEqual(b.gained, 1 + 10 * 2, 'المسح التاني مضروب ×2');
+  assert.strictEqual(b.gained, 1 + 10 * 2 + 300, 'المسح التاني مضروب ×2، واللوح فضي');
   g.tray = [piece(ONE), piece(ONE), piece(ONE)];
   L.place(g, 0, 5, 0); assert.strictEqual(g.combo, 2);
   L.place(g, 1, 5, 2); assert.strictEqual(g.combo, 2);
@@ -112,6 +115,7 @@ test('التراجع يرجّع كل حاجة مرة واحدة بس — حتى 
   L.place(g, 0, 0, 0);
   g.over = true;
   assert.ok(L.undo(g));
+  assert.strictEqual(g.lines, 0); assert.strictEqual(g.level, 1);
   assert.strictEqual(JSON.stringify({ b: g.board, s: g.score, c: g.combo, n: g.noClear, t: g.tray }), before);
   assert.ok(!g.over);
   L.place(g, 0, 0, 0);
@@ -135,6 +139,36 @@ test('جولات عشوائية كاملة ما بتكسرش القواعد', fu
     assert.ok(g.board.every(function (v) { return v >= 0 && v <= 6; }));
     assert.ok(g.score >= 0);
   }
+});
+
+test('الليفلات: ليفل 1 قطع سهلة بس، وبتطلع بعد 3 خطوط', function () {
+  var b = L.emptyBoard();
+  for (var k = 0; k < 300; k++) {
+    var tray = L.dealTray(b, Math.random, 1);
+    tray.forEach(function (p) { assert.ok(L.POOLS[0].indexOf(p.shape) >= 0, 'شكل ' + p.shape + ' مش من ليفل 1'); assert.ok(p.cells.length <= 4); });
+  }
+  assert.strictEqual(L.levelFor(0), 1); assert.strictEqual(L.levelFor(3), 2); assert.strictEqual(L.levelFor(8), 3);
+  assert.strictEqual(L.levelFor(15), 4); assert.strictEqual(L.levelFor(25), 5);
+  var g = game([ONE, ONE, ONE]);
+  for (var r = 0; r < 3; r++) for (var c = 1; c < N; c++) g.board[r * N + c] = 2;
+  g.board[7 * N + 7] = 3; // عشان اللوح ما يفضاش
+  L.place(g, 0, 0, 0); L.place(g, 1, 1, 0);
+  var res = L.place(g, 2, 2, 0);
+  assert.ok(res.leveledUp); assert.strictEqual(g.level, 2);
+});
+
+test('التشجيع والبونس', function () {
+  assert.strictEqual(L.praiseFor(1, false).word, 'Nice!');
+  assert.strictEqual(L.praiseFor(2, false).bonus, 20);
+  assert.strictEqual(L.praiseFor(3, false).word, 'Very good!');
+  assert.strictEqual(L.praiseFor(5, false).word, 'Excellent!');
+  assert.strictEqual(L.praiseFor(0, false), null);
+  var g = game([ONE, ONE, ONE]);
+  for (var i = 0; i < N; i++) { g.board[2 * N + i] = 2; g.board[i * N + 5] = 2; }
+  g.board[2 * N + 5] = 0; g.board[7 * N + 0] = 4;
+  var res = L.place(g, 0, 2, 5);
+  assert.strictEqual(res.praise.word, 'Good!');
+  assert.strictEqual(res.gained, 1 + 40 + 20);
 });
 
 console.log('\n' + passed + ' نجح · ' + failed + ' فشل');
